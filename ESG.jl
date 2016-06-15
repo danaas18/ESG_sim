@@ -4,6 +4,8 @@
 ## load packages, set seed so outputs can be reproduced and determine number of demand curves to calculate
 using DataFrames
 using Distributions
+using DataArrays
+
 srand(246)
 draws = 1000
 
@@ -18,6 +20,10 @@ port = delete!(port,:MC_tot)
 port[:MC] = port[:MC_part] .+ (port[:CO2e] .* port[:CO2cost])
 sort!(port[:MC])
 port[:cumu] = cumsum(port[:Capacity])
+
+#creating a supply curve
+supply_curve = rep(port[:MC], port[:Capacity])
+
 
 #defining demand for each hour.
 ##note: ideally, a function could import any arrays of intercepts and slopes
@@ -36,3 +42,22 @@ y_intercepts = x_intercepts .* -D1_mT[1]
 #calculating demand curves
 ##this seems to do what I want. It creates 1000 vectors of length 22050. However, it does not create a matrix???? ndims(demand_curves) returns 1???
 demand_curves = map(x -> x + D1_mT[1] * collect(1:maximum(port[:cumu])), y_intercepts)
+
+#calculating equilibrium quanitity on supply curves
+equil_quantities = map(x -> indmin(abs(supply_curve - x)), demand_curves)
+
+#calculating marginal unit`
+nets1 = map(x -> port[:cumu] - x, equil_quantities)
+
+
+
+
+marginal_unit = map(x -> min(which(x >0)), nets1)
+
+
+
+map(x -> indmin()
+
+indmim(supply_curve - x), demand_curves[1])
+
+demand_curves
