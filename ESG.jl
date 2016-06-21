@@ -46,18 +46,13 @@ demand_curves = map(x -> x + D1_mT[1] * collect(1:maximum(port[:cumu])), y_inter
 #calculating equilibrium quanitity on supply curves
 equil_quantities = map(x -> indmin(abs(supply_curve - x)), demand_curves)
 
-#calculating marginal unit`
+#calculating marginal unit and clearing price
 nets1 = map(x -> port[:cumu] - x, equil_quantities)
+marginal_unit = map(x -> indmin(abs(x)), nets1)
+clear_price = map(x -> port[:MC][x], marginal_unit)
+
+revenue = port[:Capacity] .* quantile!(clear_price, quantile) .- port[:Capacity] .* port[:MC]
+revenue = revenue[revenue .>= 0]
 
 
-
-
-marginal_unit = map(x -> min(which(x >0)), nets1)
-
-
-
-map(x -> indmin()
-
-indmim(supply_curve - x), demand_curves[1])
-
-demand_curves
+port
