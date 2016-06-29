@@ -6,6 +6,7 @@ using DataFrames
 using Distributions
 using DataArrays
 
+#set seed and number of draws
 srand(246)
 draws = 1000
 
@@ -25,8 +26,6 @@ port[:cumu] = cumsum(port[:Capacity])
 supply_curve = rep(port[:MC], port[:Capacity])
 
 #defining demand for each hour.
-##note: ideally, a function could import any arrays of intercepts and slopes
-##change these to add a given array of slopes and intercepts
 
 D1_intN = [4184, 3842, 7986, 5209]
 D1_intS = [7176, 9874, 9901, 9760]
@@ -36,62 +35,82 @@ D1_mN = [-2.34, -2.58, -2.54, -2.67]
 D1_mS = [-2.03, -2.80, -2.49, -2.41]
 D1_mT = D1_mN + D1_mS
 
-##I'll want the function(s) to call a given hour, and return: marginal units, clearing prices, and revenues
+##wrap below in a function
 
+#calculate x intercepts from random normal distribution
 x_intercepts = []
 for i in collect(1:length(D1_intT))
   x_intercepts_add = rand(Normal(D1_intT[i], D1_intT[i] * .03), draws)
   push!(x_intercepts, x_intercepts_add)
 end
 
+#calculate y intercets (will probably shorten these two into one loop)
 y_intercepts = []
 for i in collect(1:length(D1_mT))
   y_intercepts_add = x_intercepts[i] .* -D1_mT[i]
   push!(y_intercepts, y_intercepts_add)
 end
 
+#calculate demand curves
 demand_curves = []
 for i in collect(1:length(y_intercepts))
   demand_curves_add = map(x -> x + D1_mT[i] * collect(1:maximum(port[:cumu])), y_intercepts[i])
   push!(demand_curves, demand_curves_add)
 end
 
+#calculate closest MW where supply and demand intersect
 equil_quantities = []
 for i in collect(1:length(demand_curves))
   equil_calc = map(x -> indmin(abs(supply_curve - x)), demand_curves[i])
   push!(equil_quantities, equil_calc)
 end
 
-#############start here
+###trying to convert to DataFrame... needed below
+equil_quantities = convert(DataFrame, equil_quantities)
+
+##determine marginal unit
 nets = []
 for i in collect(1:length(equil_quantities))
   nets_calc = map(x -> port[:cumu] - x, equil_quantities[i])
   push!(nets, nets_calc)
 end
 
-nets
-
+#determine marginal unit
 marginal_unit = []
 for i in collect(1:length(nets))
   marginal_calc = map(x -> indmin(abs(x)),nets[i])
   push!(marginal_unit, marginal_calc)
 end
 
+#choose a clearing price
 clear_price = []
 for i in collect(1:length(marginal_unit))
   clear_price_calc = map(x -> port[:MC][x], marginal_unit[i])
   push!(clear_price, clear_price_calc)
 end
 
-
+#calculate net revenue, returns negative values for units that should not be dispatched.
 revenue = []
 for i in collect(1:length(marginal_unit))
   revenue_calc = port[:Capacity] .* quantile!(clear_price[i], quantile) .- port[:Capacity] .* port[:MC]
   push!(revenue, revenue_calc)
 end
 
-###start here
-## get rid of negative revenues 
+## trying to fix negative net revenues
+revenue2 = []
+for i in collect(1:length(revenue))
+  revenue2_bool = revenue[revenue[i] .>= 0 ]
+  revenue2_calc = revenue[revenue2_bool]
+  push!(revenue2, revenue2_calc)
+end
+
+revenue2_bool = revenue[revenue .>= 0]
+
+
+revenue[revenue > 0]
+
+
+## get rid of negative revenues
 
 
 #### old stuff
